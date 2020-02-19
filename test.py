@@ -1,4 +1,7 @@
 import pygame
+"""
+Класс кнопки
+"""
 
 
 class Button:
@@ -12,7 +15,7 @@ class Button:
         self.border_weight = bw
         self.alt = alt
         self.screen = scr
-        self.func = lambda: None
+        self.func = (lambda: None, '')
         self.text = pygame.font.Font(font[0], font[1]).render(text, 80, fc)
         self.border_color = border
         self.calm = True
@@ -36,12 +39,12 @@ class Button:
         if self.is_overlapping(mouse.pos):
             self.calm = False
 
-    def set_act(self, func):
-        self.func = func
+    def set_act(self, func, value=None):
+        self.func = (func, value)
 
     def init_click(self):
         if not self.calm:
-            self.func()
+            self.func[0](self.func[1])
 
     def is_overlapping(self, coords):
         if self.coords[0] <= coords[0] <= self.coords[0] + self.width and \
@@ -53,76 +56,76 @@ class Button:
 class Game:
     def __init__(self, display):
         self.on = True
-        self.screen = 0
         self.display = display
-        self.objects = dict()
+        self.mouse_down = False
+        self.screen = self.Menu(self)
+    """
+    Класс самой игры
+    """
+    class Game:
+        def __init__(self, parent):
+            self.parent = parent
+
+        def render(self):
+            pass
+
+        def mouse_pressed(self, mouse):
+            pass
+
+        def key_pressed(self, key):
+            pass
+
+        def mouse_moved(self, movement):
+            pass
+    """
+    Класс меню игры
+    """
+    class Menu:
+        def __init__(self, parent):
+            self.parent = parent
+            self.objects = {'buttons': [Button(self.parent.display, (50, 200), (400, 100),
+                                               text="Start", alt=(50, 50, 50))]}
+            self.objects['buttons'][0].set_act(self.parent.change_screen, value=1)
+
+        def render(self):
+            self.parent.display.blit(pygame.font.Font(None, 150).render("Project Name", 80,
+                                                                        (100, 0, 0)), (50, 50))
+            for i in self.objects:
+                for k in self.objects[i]:
+                    k.render()
+
+        def mouse_pressed(self, mouse):
+            pass
+
+        def key_pressed(self, key):
+            if key.key == pygame.K_KP_ENTER:
+                self.parent.change_screen(self.parent.Game(self.parent))
+
+        def mouse_moved(self, movement):
+            pass
 
     def kill_the_game(self):
         self.on = False
 
     def render(self):
-        if self.screen == 0:
-            self.render_menu()
-        elif self.screen == 1:
-            self.render_game()
-
-    def render_menu(self):
-        self.display.blit(pygame.font.Font(None, 150).render("Project Name", 80,
-                                                             (100, 0, 0)), (50, 50))
-        for i in self.objects:
-            for k in self.objects[i]:
-                k.render()
+        self.screen.render()
 
     def change_screen(self, scr):
         self.screen = scr
-        if self.screen == 0:
-            self.set_menu()
-        elif self.screen == 1:
-            self.set_game()
-
-    def render_game(self):
-        pass
 
     def key_pressed(self, key):
-        if self.screen == 0:
-            self.key_pressed_menu(key)
-        elif self.screen == 1:
-            self.key_pressed_ingame(key)
+        self.screen.key_pressed(key)
 
-    def mouse_pressed(self, mouse):
-        if self.screen == 0:
-            self.mouse_pressed_menu(mouse)
-        elif self.screen == 1:
-            self.mouse_pressed_ingame(mouse)
+    def mouse_pressed(self, mouse, up=False):
+        if not up:
+            self.mouse_down = True
+        self.screen.mouse_pressed(mouse)
 
     def get_screen_obj_info(self):
         pass
 
-    def key_pressed_menu(self, key):
-        if key.key == pygame.K_KP_ENTER:
-            self.change_screen(1)
-
-    def key_pressed_ingame(self, key):
-        pass
-
-    def mouse_pressed_menu(self, mouse):
-        pass
-
-    def mouse_pressed_ingame(self, mouse):
-        pass
-
     def mouse_moved(self, movement):
-        if self.screen == 0:
-            pass
-
-    def set_menu(self):
-        self.objects.clear()
-        self.objects['buttons'] = [Button(self.display, (50, 200), (400, 100),
-                                          text="Start", alt=(50, 50, 50))]
-        self.objects['buttons'][0].set_act(self.change_screen(1))
-
-    def set_game(self):
-        pass
+        self.screen.mouse_moved(movement)
 
 
 if __name__ == '__main__':
@@ -131,7 +134,6 @@ if __name__ == '__main__':
     pygame.font.init()
     screen = pygame.display.set_mode(SIZE)
     game = Game(screen)
-    game.set_menu()
     while game.on:
         for event in pygame.event.get():
             if event.type == pygame.KEYDOWN:
@@ -141,6 +143,8 @@ if __name__ == '__main__':
                     game.key_pressed(event)
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 game.mouse_pressed(event)
+            elif event.type == pygame.MOUSEBUTTONUP:
+                game.mouse_pressed(event, up=True)
             elif event.type == pygame.MOUSEMOTION:
                 game.mouse_moved(event)
             elif event.type == pygame.QUIT:
