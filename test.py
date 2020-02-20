@@ -38,13 +38,18 @@ class Button:
     def mouse_down_track(self, mouse):
         if self.is_overlapping(mouse.pos):
             self.calm = False
+        else:
+            self.calm = True
 
     def set_act(self, func, value=None):
         self.func = (func, value)
 
-    def init_click(self):
-        if not self.calm:
+    def mouse_released(self, mouse):
+        if self.is_overlapping(mouse.pos):
             self.func[0](self.func[1])
+            self.calm = True
+        else:
+            self.calm = True
 
     def is_overlapping(self, coords):
         if self.coords[0] <= coords[0] <= self.coords[0] + self.width and \
@@ -84,8 +89,8 @@ class Game:
         def __init__(self, parent):
             self.parent = parent
             self.objects = {'buttons': [Button(self.parent.display, (50, 200), (400, 100),
-                                               text="Start", alt=(50, 50, 50))]}
-            self.objects['buttons'][0].set_act(self.parent.change_screen, value=1)
+                                               text="Start", alt=(100, 0, 0))]}
+            self.objects['buttons'][0].set_act(self.parent.change_screen, value=self.parent.Game(self.parent))
 
         def render(self):
             self.parent.display.blit(pygame.font.Font(None, 150).render("Project Name", 80,
@@ -95,14 +100,19 @@ class Game:
                     k.render()
 
         def mouse_pressed(self, mouse):
-            pass
+            for i in self.objects:
+                for k in self.objects[i]:
+                    k.mouse_released(mouse)
 
         def key_pressed(self, key):
             if key.key == pygame.K_KP_ENTER:
                 self.parent.change_screen(self.parent.Game(self.parent))
 
-        def mouse_moved(self, movement):
-            pass
+        def mouse_moved(self, mouse):
+            if self.parent.mouse_down:
+                for i in self.objects:
+                    for k in self.objects[i]:
+                        k.mouse_down_track(mouse)
 
     def kill_the_game(self):
         self.on = False
@@ -119,13 +129,15 @@ class Game:
     def mouse_pressed(self, mouse, up=False):
         if not up:
             self.mouse_down = True
-        self.screen.mouse_pressed(mouse)
+        else:
+            self.mouse_down = False
+            self.screen.mouse_pressed(mouse)
 
     def get_screen_obj_info(self):
         pass
 
-    def mouse_moved(self, movement):
-        self.screen.mouse_moved(movement)
+    def mouse_moved(self, mouse):
+        self.screen.mouse_moved(mouse)
 
 
 if __name__ == '__main__':
