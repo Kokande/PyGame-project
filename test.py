@@ -15,7 +15,7 @@ class Button:
         self.border_weight = bw
         self.alt = alt
         self.screen = scr
-        self.func = (lambda: None, '')
+        self.func = (lambda x: None, None)
         self.text = pygame.font.Font(font[0], font[1]).render(text, 80, fc)
         self.border_color = border
         self.calm = True
@@ -46,7 +46,10 @@ class Button:
 
     def mouse_released(self, mouse):
         if self.is_overlapping(mouse.pos):
-            self.func[0](self.func[1])
+            if self.func[1] is None:
+                self.func[0]()
+            else:
+                self.func[0](self.func[1])
             self.calm = True
         else:
             self.calm = True
@@ -64,6 +67,7 @@ class Game:
         self.display = display
         self.mouse_down = False
         self.screen = self.Menu(self)
+        self.game = None
     """
     Класс самой игры
     """
@@ -78,7 +82,8 @@ class Game:
             pass
 
         def key_pressed(self, key):
-            pass
+            if key.key == pygame.K_ESCAPE:
+                self.parent.change_screen(self.parent.Menu(self.parent))
 
         def mouse_moved(self, movement):
             pass
@@ -89,8 +94,11 @@ class Game:
         def __init__(self, parent):
             self.parent = parent
             self.objects = {'buttons': [Button(self.parent.display, (50, 200), (400, 100),
-                                               text="Start", alt=(100, 0, 0))]}
+                                               text="Start", alt=(100, 0, 0)),
+                                        Button(self.parent.display, (50, 650), (250, 100),
+                                               text="Quit", alt=(100, 0, 0))]}
             self.objects['buttons'][0].set_act(self.parent.change_screen, value=self.parent.Game(self.parent))
+            self.objects['buttons'][1].set_act(self.parent.kill_the_game)
 
         def render(self):
             self.parent.display.blit(pygame.font.Font(None, 150).render("Project Name", 80,
@@ -107,12 +115,17 @@ class Game:
         def key_pressed(self, key):
             if key.key == pygame.K_KP_ENTER:
                 self.parent.change_screen(self.parent.Game(self.parent))
+            elif key.key == pygame.K_ESCAPE:
+                self.parent.kill_the_game()
 
         def mouse_moved(self, mouse):
-            if self.parent.mouse_down:
-                for i in self.objects:
-                    for k in self.objects[i]:
-                        k.mouse_down_track(mouse)
+            for i in self.objects:
+                for k in self.objects[i]:
+                    k.mouse_down_track(mouse)
+
+    """
+    Методы класса Game
+    """
 
     def kill_the_game(self):
         self.on = False
@@ -121,6 +134,8 @@ class Game:
         self.screen.render()
 
     def change_screen(self, scr):
+        if type(self.screen) == Game.Game:
+            self.save_game_state()
         self.screen = scr
 
     def key_pressed(self, key):
@@ -129,6 +144,7 @@ class Game:
     def mouse_pressed(self, mouse, up=False):
         if not up:
             self.mouse_down = True
+            self.mouse_moved(mouse)
         else:
             self.mouse_down = False
             self.screen.mouse_pressed(mouse)
@@ -138,6 +154,9 @@ class Game:
 
     def mouse_moved(self, mouse):
         self.screen.mouse_moved(mouse)
+
+    def save_game_state(self):
+        self.game = self.screen
 
 
 if __name__ == '__main__':
