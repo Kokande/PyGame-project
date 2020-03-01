@@ -1,9 +1,13 @@
 import pygame
 import random
-import pprint
 """
 Класс кнопки
 """
+
+
+class Enemy:
+    def __init__(self):
+        pass
 
 
 class Button:
@@ -73,26 +77,31 @@ class Game:
         self.on = True
         self.display = display
         self.mouse_down = False
-        self.screen = self.Menu(self)
-        self.game = None
+        self.game = self.Game(self)
+        self.screen = self.Menu(self, starting=True)
     """
     Класс самой игры
     """
     class Game:
-        def __init__(self, parent):
+        def __init__(self, parent, map_size=3, current_lvl=1,
+                     player_pos=(-1, -1), standing_on='0', game_map=None, new=True):
             self.parent = parent
-            self.map_size = 3
-            self.current_lvl = 1
+            self.map_size = map_size
+            self.current_lvl = current_lvl
             self.map_draft = {0: [['.' for i in range(10)] for i in range(10)]}
-            self.map = [[0 for k in range(self.map_size)] for i in range(self.map_size)]
-            self.player_pos = (-1, -1)
-            self.standing_on = '0'
-            self.indoor = True
-            self.map_generator()
+            if game_map is None:
+                self.game_map = [[0 for k in range(self.map_size)] for i in range(self.map_size)]
+            else:
+                self.game_map = game_map
+            self.player_pos = player_pos
+            self.standing_on = standing_on
+            self.extract_draftables()
+            if new:
+                self.map_generator()
 
         def render(self):
             step = 40
-            visible = [[self.map[i][k]
+            visible = [[self.game_map[i][k]
                         if 0 <= k < self.map_size * 10
                         else '*'
                         for k in range(self.player_pos[0] - (SIZE[0] // step - 1) // 2,
@@ -151,7 +160,7 @@ class Game:
             pass
 
         def move_player(self, direction):
-            self.map[self.player_pos[1]][self.player_pos[0]] = self.standing_on
+            self.game_map[self.player_pos[1]][self.player_pos[0]] = self.standing_on
             if direction == 'UP':
                 new_coords = (self.player_pos[0], self.player_pos[1] - 1)
                 if self.move_possible(new_coords):
@@ -168,36 +177,37 @@ class Game:
                 new_coords = (self.player_pos[0] + 1, self.player_pos[1])
                 if self.move_possible(new_coords):
                     self.player_pos = new_coords
-            self.standing_on = self.map[self.player_pos[1]][self.player_pos[0]]
-            self.map[self.player_pos[1]][self.player_pos[0]] = 'P'
+            self.standing_on = self.game_map[self.player_pos[1]][self.player_pos[0]]
+            self.game_map[self.player_pos[1]][self.player_pos[0]] = 'P'
 
         def move_possible(self, new_coords):
             if 0 <= new_coords[0] < 10 * self.map_size and \
                0 <= new_coords[1] < 10 * self.map_size and \
-               self.map[new_coords[1]][new_coords[0]] in ['0', '1', '.'] and \
-               (self.map[new_coords[1]][new_coords[0]] == '1' or
-               self.standing_on == self.map[new_coords[1]][new_coords[0]] or
+               self.game_map[new_coords[1]][new_coords[0]] in ['0', '1', '.'] and \
+               (self.game_map[new_coords[1]][new_coords[0]] == '1' or
+                self.standing_on == self.game_map[new_coords[1]][new_coords[0]] or
                self.standing_on == '1'):
                 return True
             return False
 
-        def map_generator(self):
+        def extract_draftables(self):
             with open("draft.dat", 'rt') as draft:
                 for i in range(1, BLOCKS + 1):
                     draft.readline()
                     self.map_draft[i] = []
                     for k in range(10):
                         self.map_draft[i].append(list(draft.readline().rstrip()))
+
+        def map_generator(self):
             generator = dict()
             coord_seq = random.sample(range(1, self.map_size ** 2 + 1), BLOCKS)
             seq = random.sample(range(1, len(self.map_draft)), BLOCKS)
-
             for i in range(BLOCKS):
                 generator[coord_seq[i]] = seq[i]
             for i in range(self.map_size):
                 for k in range(self.map_size):
                     if i * self.map_size + k + 1 in coord_seq:
-                        self.map[i][k] = generator[i * self.map_size + k + 1]
+                        self.game_map[i][k] = generator[i * self.map_size + k + 1]
             self.map_constructor()
 
         def map_constructor(self):
@@ -205,18 +215,19 @@ class Game:
             for i in range(self.map_size):
                 for k in range(self.map_size):
                     for j in range(10):
-                        map_rows[i * 10 + j].extend(self.map_draft[self.map[i][k]][j])
-                        if self.map[i][k] == 1 and j == 4:
+                        map_rows[i * 10 + j].extend(self.map_draft[self.game_map[i][k]][j])
+                        if self.game_map[i][k] == 1 and j == 4:
                             self.player_pos = (k * 10 + 4, i * 10 + j)
-            self.map = map_rows
+            self.game_map = map_rows
     """
     Класс меню игры
     """
     class Menu:
-        def __init__(self, parent):
+        def __init__(self, parent, starting=False):
             self.parent = parent
             self.objects = {'buttons': [Button(self.parent.display, (50, 200), (400, 100),
-                                               text="Start", alt=(100, 0, 0)),
+                                               text="Start" if starting else "Continue",
+                                               alt=(100, 0, 0)),
                                         Button(self.parent.display, (50, 350), (325, 100),
                                                text="Load", alt=(100, 0, 0), bw=2),
                                         Button(self.parent.display, (50, 500), (325, 100),
@@ -224,7 +235,9 @@ class Game:
                                         Button(self.parent.display, (50, 650), (250, 100),
                                                text="Quit", alt=(100, 0, 0), bw=2)]}
             self.objects['buttons'][0].set_act(self.parent.change_screen,
-                                               value=self.parent.Game(self.parent))
+                                               value=self.parent.game)
+            self.objects['buttons'][1].set_act(self.parent.load_game)
+            self.objects['buttons'][2].set_act(self.parent.save_game)
             self.objects['buttons'][3].set_act(self.parent.kill_the_game)
 
         def render(self):
@@ -242,7 +255,7 @@ class Game:
 
         def key_pressed(self, key):
             if key.key == pygame.K_KP_ENTER:
-                self.parent.change_screen(self.parent.Game(self.parent))
+                self.parent.change_screen(self.parent.game)
             elif key.key == pygame.K_ESCAPE:
                 self.parent.kill_the_game()
 
@@ -254,6 +267,29 @@ class Game:
     """
     Методы класса Game
     """
+    def load_game(self):
+        with open("info.dat", 'rt') as save:
+            file = save.readlines()
+        map_size = int(file.pop(0).rstrip())
+        current_lvl = int(file.pop(0).rstrip())
+        player_pos = tuple([int(i) for i in file.pop(0).rstrip()[1:-1].split(', ')])
+        standing_on = file.pop(0).rstrip()
+        game_map = [i.rstrip().split() for i in file]
+        self.game = self.Game(self, map_size=map_size, current_lvl=current_lvl,
+                              player_pos=player_pos, standing_on=standing_on,
+                              game_map=game_map, new=False)
+        if type(self.screen) == Game.Menu:
+            self.screen.objects['buttons'][0].set_act(self.change_screen,
+                                                      value=self.game)
+
+    def save_game(self):
+        with open("info.dat", 'wt') as save:
+            save.write(str(self.game.map_size) + '\n' +
+                       str(self.game.current_lvl) + '\n' +
+                       str(self.game.player_pos) + '\n' +
+                       self.game.standing_on + '\n')
+            for i in self.game.game_map:
+                save.write(' '.join(i) + '\n')
 
     def kill_the_game(self):
         self.on = False
@@ -262,8 +298,6 @@ class Game:
         self.screen.render()
 
     def change_screen(self, scr):
-        if type(self.screen) == Game.Game:
-            self.save_game_state()
         self.screen = scr
 
     def key_pressed(self, key):
@@ -282,9 +316,6 @@ class Game:
 
     def mouse_moved(self, mouse):
         self.screen.mouse_moved(mouse)
-
-    def save_game_state(self):
-        self.game = self.screen
 
 
 SIZE = (1000, 800)
