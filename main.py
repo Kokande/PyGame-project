@@ -445,7 +445,7 @@ class Game:
         for i in range(0, len(e_d), 3):
             enemies.append(Entity(tuple([int(k)
                                          for k in [e_d[i][1:-1], e_d[i + 1][:-1]]]),
-                                  self.game, standing_on=e_d[i + 2]))
+                                  self.game, standing_on=e_d[i + 2], type_name='Enemy'))
         game_map = [i.rstrip().split() for i in file]
         self.game = self.Game(self, map_size=map_size, current_lvl=current_lvl,
                               player_pos=player_pos, standing_on=standing_on,
